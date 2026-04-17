@@ -1,3 +1,25 @@
 (1) What will you do? (1-2 paragraphs)
+    I plan to write a GameBoy emulator which supports playing games with input
+    and graphical output. I will accomplish this using a graphics/input toolkit
+    (SDL, GLFW, raw OpenGL, etc) and by implementing the GameBoy ISA in C.
+
+    I may support something like audio or one of the GameBoy accessories (see
+    the GameBoy printer, camera, 4-player adapter, or Game Genie/Shark
+    cards). However this is subject to timing.
+
 (2) Who are the team members?
+    Me.
+
 (3) What research did you do? Links to articles, papers, etc.
+    I skimmed some documentation to see how complicated the architecture is:
+    https://gbdev.io/pandocs/, https://github.com/gbdev/pandocs
+    https://gekkio.fi/files/gb-docs/gbctr.pdf
+
+    I have looked at some testing ROMs to test an emulator throughout
+    development without needing enough to support a full game.
+    https://github.com/retrio/gb-test-roms
+
+    I have skimmed the SDL3 and GLFW documentation to determine what GUI and
+    input tools I would want to use. Either one seems fine.
+    https://wiki.libsdl.org/SDL3/FrontPage
+    https://www.glfw.org/documentation.html
