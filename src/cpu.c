@@ -230,6 +230,7 @@ int cpu_step() {
             break;
         case EI:
             regs.ime = true;
+            break;
         case JP:
             next_pc = cpu_jp(instr, op2_16);
             break;
