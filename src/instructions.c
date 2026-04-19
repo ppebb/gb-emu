@@ -1,4 +1,4 @@
-#include "src/instructions.h"
+#include "instructions.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -44,6 +44,10 @@ void instruction_init() {
     instructions[0x1D] = si(DEC, 1, 1, E, NONE);
     instructions[0x2D] = si(DEC, 1, 1, L, NONE);
     instructions[0x3D] = si(DEC, 1, 1, A, NONE);
+
+    // di, ei
+    instructions[0xF3] = si(DI, 1, 1, NONE, NONE);
+    instructions[0xF8] = si(EI, 1, 1, NONE, NONE);
 
     // jp
     instructions[0xC3] = si(JP, 3, 4, NONE, D16);
