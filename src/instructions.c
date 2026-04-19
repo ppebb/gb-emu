@@ -49,6 +49,9 @@ void instruction_init() {
     instructions[0xF3] = si(DI, 1, 1, NONE, NONE);
     instructions[0xF8] = si(EI, 1, 1, NONE, NONE);
 
+    // halt
+    instructions[0x76] = si(HALT, 1, 1, NONE, NONE);
+
     // jp
     instructions[0xC3] = si(JP, 3, 4, NONE, D16);
 

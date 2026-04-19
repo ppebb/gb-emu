@@ -199,6 +199,9 @@ uint8_t cpu_pop() {
 }
 
 int cpu_step() {
+    if (regs.halt)
+        return 1;
+
     uint8_t instr_byte = mem_read_byte(regs.pc);
 
     if (regs.pc == 0x021B)
@@ -230,6 +233,9 @@ int cpu_step() {
             break;
         case EI:
             regs.ime = true;
+            break;
+        case HALT:
+            regs.halt = true;
             break;
         case JP:
             next_pc = cpu_jp(instr, op2_16);
@@ -278,20 +284,22 @@ void cpu_req_interrupt(Interrupt interrupt) {
 }
 
 bool cpu_run_interrupts() {
-    // Master interrupt disabled
+    uint8_t reqs = read_io(IRR_ADDR);
+
+    // If the enabled interrupts do not overlap with the existing interrupt
+    // requests, then no interrupts can be services
+    if (!(ie & reqs))
+        return false;
+
+    // Exit halt if there is any overlap
+    regs.halt = false;
+
+    // If the master interrupt is disabled, do not service interrupts even if
+    // we've exited halt
     if (!regs.ime)
         return false;
 
     uint8_t ie_flags = ie;
-    // No interrupts are enabled
-    if (!ie_flags)
-        return false;
-
-    uint8_t reqs = read_io(IRR_ADDR);
-
-    // No interrupts are requested
-    if (!reqs)
-        return false;
 
     for (Interrupt i = 0; i < 5; i++) {
         uint8_t bit_idx = 1 << i;

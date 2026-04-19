@@ -8,6 +8,7 @@ typedef enum _Op {
     DEC16,
     DI,
     EI,
+    HALT,
     JP,
     JR,
     LD,
