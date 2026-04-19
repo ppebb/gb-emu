@@ -1,0 +1,24 @@
+#pragma once
+
+#define WIDTH 160
+#define HEIGHT 144
+
+#define CLK_RATE 4194304
+// CLK_RATE / 60
+#define CYCLES_PER_FRAME 69905
+
+#define SCLN_CNT 154
+#define SCLN_VISIBLE_CNT 144
+#define SCLN_CYCLES 456
+
+#define DIV_ADDR 0xFF04
+#define TIMA_ADDR 0xFF05
+#define TMA_ADDR 0xFF06
+#define TMC_ADDR 0xFF07
+#define IRR_ADDR 0xFF0F
+#define LCD_CTRL_ADDR 0xFF40
+#define LCD_STAT_ADDR 0xFF41
+#define SCLN_ADDR 0xFF44
+#define LCD_LYC_ADDR 0xFF45
+#define DMA_TRANSFER_ADDR 0xFF46
+#define IE_ADDR 0xFFFF
