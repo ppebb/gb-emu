@@ -61,3 +61,52 @@ uint8_t mem_read_byte(uint16_t addr) {
     printf("Read from addr %04x\n", addr);
     return 0;
 }
+
+void mem_write_byte(uint16_t addr, uint8_t data) {
+    if (addr < 0x4000) {
+        cart_bank0[addr] = data;
+        return;
+    }
+
+    if (addr < 0x8000) {
+        cart_bank1[addr - 0x4000] = data;
+        return;
+    }
+
+    if (addr < 0xA000) {
+        vram[addr - 0x8000] = data;
+        return;
+    }
+
+    if (addr < 0xC000) {
+        ex_ram[addr - 0xA000] = data;
+        return;
+    }
+
+    if (addr < 0xD000) {
+        wram_0[addr - 0xC000] = data;
+        return;
+    }
+
+    if (addr < 0xE000) {
+        wram_1[addr - 0xD000] = data;
+        return;
+    }
+
+    if (addr < 0xFE00) {
+        fprintf(stderr, "Prohibited write to Echo Ram: %04x\n", addr);
+        return;
+    }
+
+    if (addr < 0xFEA0) {
+        oam[addr - 0xFE00] = data;
+        return;
+    }
+
+    if (addr < 0xFE00) {
+        fprintf(stderr, "Prohibited write to Unusable Ram: %04x\n", addr);
+        return;
+    }
+
+    printf("Write to addr %04x\n", addr);
+}
