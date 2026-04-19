@@ -1,17 +1,15 @@
 #include "cpu.h"
+#include "defs.h"
 #include "mem.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-#define F_Z (1 << 7)
-#define F_N (1 << 6)
-#define F_H (1 << 5)
-#define F_C (1 << 4)
-
-#define F_ISZERO (regs.f & F_Z)
-#define F_ISNEGATIVE (regs.f & F_N)
-#define F_ISCARRY (regs.f & F_C)
-#define F_ISHALFCARRY (regs.f & F_H)
+typedef enum _Flags {
+    ZERO = 1 << 7,
+    NEG = 1 << 6,
+    HALF = 1 << 5,
+    CARRY = 1 << 4,
+} Flags;
 
 #define F_ISSET(x) ((regs.f & (x)) != 0)
 #define F_SET(x) (regs.f |= (x))
@@ -53,16 +51,19 @@ typedef struct _Regs {
     uint16_t sp;
     uint16_t pc;
 
+    bool ime;
     bool halt;
 } Regs;
 
 Regs regs = (Regs){
-    .af = 0,
-    .bc = 0,
-    .de = 0,
-    .hl = 0,
+    .af = 0x01B0,
+    .bc = 0x0013,
+    .de = 0x00D8,
+    .hl = 0x014D,
     .pc = 0x100,
-    .sp = 0,
+    .sp = 0xFFFE,
+    .ime = false,
+    .halt = false,
 };
 
 bool _step_debug;
@@ -178,20 +179,30 @@ void cpu_print(uint16_t next_pc) {
         printf("Instr 0x%04x: 0x%02x, %s\n", regs.pc, current_instr_byte, current_instr.disasm);
 
     printf("Z N H C\n");
-    printf("%b %b %b %b\n", F_ISSET(F_Z), F_ISSET(F_N), F_ISSET(F_H), F_ISSET(F_C));
+    printf("%b %b %b %b\n", F_ISSET(ZERO), F_ISSET(NEG), F_ISSET(HALF), F_ISSET(CARRY));
     printf("PC: $%04x\n", next_pc);
     printf("SP: $%04x\n", regs.sp);
     printf("A: $%02x, F: $%02x\n", regs.a, regs.f);
     printf("B: $%02x, C: $%02x\n", regs.b, regs.c);
     printf("D: $%02x, E: $%02x\n", regs.d, regs.e);
     printf("H: $%02x, L: $%02x\n", regs.h, regs.l);
+    printf("IME: %b, HALT: %b\n", regs.ime, regs.halt);
 }
 
-void cpu_step() {
+void cpu_push(uint8_t data) {
+    mem_write_byte(regs.sp, data);
+    regs.sp--;
+}
+
+uint8_t cpu_pop() {
+    return mem_read_byte(regs.sp--);
+}
+
+int cpu_step() {
     uint8_t instr_byte = mem_read_byte(regs.pc);
 
-    /* if (regs.pc == 0x021B) */
-    /*     _step_debug = true; */
+    if (regs.pc == 0x021B)
+        _step_debug = true;
 
     Instruction instr = instruction_get(instr_byte);
     current_instr_byte = instr_byte;
@@ -214,6 +225,11 @@ void cpu_step() {
         case DEC:
             cpu_dec(instr, op1_8);
             break;
+        case DI:
+            regs.ime = false;
+            break;
+        case EI:
+            regs.ime = true;
         case JP:
             next_pc = cpu_jp(instr, op2_16);
             break;
@@ -250,13 +266,71 @@ void cpu_step() {
     }
 
     regs.pc = next_pc;
+
+    return instr.cycles;
+}
+
+void cpu_req_interrupt(Interrupt interrupt) {
+    uint8_t req = read_io(IRR_ADDR);
+    req |= interrupt;
+    write_io(IRR_ADDR, req);
+}
+
+bool cpu_run_interrupts() {
+    // Master interrupt disabled
+    if (!regs.ime)
+        return false;
+
+    uint8_t ie_flags = ie;
+    // No interrupts are enabled
+    if (!ie_flags)
+        return false;
+
+    uint8_t reqs = read_io(IRR_ADDR);
+
+    // No interrupts are requested
+    if (!reqs)
+        return false;
+
+    for (Interrupt i = 0; i < 5; i++) {
+        uint8_t bit_idx = 1 << i;
+
+        if (!(ie_flags & bit_idx && reqs & bit_idx))
+            continue;
+
+        regs.ime = false;
+        reqs &= ~bit_idx;
+        write_io(IRR_ADDR, reqs);
+
+        switch (i) {
+            case INT_VBLANK:
+                regs.pc = 0x40;
+                break;
+            case INT_STAT:
+                regs.pc = 0x48;
+                break;
+            case INT_TIMER:
+                regs.pc = 0x50;
+                break;
+            case INT_SERIAL:
+                regs.pc = 0x58;
+                break;
+            case INT_JOYPAD:
+                regs.pc = 0x60;
+                break;
+        }
+
+        return true;
+    }
+
+    return false;
 }
 
 void cpu_dec(Instruction instr, uint8_t op1) {
     if (op1 & 0x0f)
-        F_CLEAR(F_H);
+        F_CLEAR(HALF);
     else
-        F_SET(F_H);
+        F_SET(HALF);
 
     uint8_t res = op1 - 1;
 
@@ -266,11 +340,11 @@ void cpu_dec(Instruction instr, uint8_t op1) {
         set_reg_8(instr.t1, res);
 
     if (!res)
-        F_SET(F_Z);
+        F_SET(ZERO);
     else
-        F_CLEAR(F_Z);
+        F_CLEAR(ZERO);
 
-    F_SET(F_N);
+    F_SET(NEG);
 }
 
 uint16_t cpu_jp(Instruction instr, uint16_t op2) {
@@ -299,7 +373,7 @@ uint16_t cpu_jr(Instruction instr, int8_t op2) {
             jump = true;
             break;
         case C_NZ:
-            jump = !F_ISSET(F_Z);
+            jump = !F_ISSET(ZERO);
             break;
         default:
             fprintf(stderr, "Unknown target passed to cpu_jr: %s\n", target_str_map[instr.t1]);
@@ -338,9 +412,9 @@ void cpu_ld16(Instruction instr, uint16_t op2) {
 void cpu_xor(Instruction instr, uint8_t op1, uint8_t op2) {
     regs.a = op1 ^ op2;
     if (!regs.a)
-        F_SET(F_Z);
+        F_SET(ZERO);
     else
-        F_CLEAR(F_Z);
+        F_CLEAR(ZERO);
 
-    F_CLEAR(F_N | F_H | F_C);
+    F_CLEAR(NEG | HALF | CARRY);
 }
