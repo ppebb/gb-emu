@@ -662,7 +662,7 @@ void cpu_ccf() {
     F_CLEAR(F_NEG);
     F_CLEAR(F_HALF);
 
-    F_SET(F_CARRY, ~F_ISSET(F_CARRY));
+    F_SET(F_CARRY, !F_ISSET(F_CARRY));
 }
 
 void cpu_cp(Instruction instr, uint8_t op1, uint8_t op2) {
