@@ -1,12 +1,12 @@
 B=build
 CC=gcc
-CC_FLAGS=-Wall -Werror -std=c23 -g3 -I./
+CC_FLAGS=-Wall -Werror -std=gnu23 -g3 -I./
 
 C_FILES=$(shell find . -name "*.c")
 C_O_FILES=${addprefix $B/,${subst .c,.o,${C_FILES}}}
 
 LINK=${firstword ${${patsubst %.c,${CC},${C_FILES}}}}
-LINK_FLAGS=-lglfw -lGL
+LINK_FLAGS=-lglfw -lGL -lc
 
 .PHONY: all
 all : $B/main
@@ -22,7 +22,7 @@ asan: $B/main
 .PHONY: munit
 munit: clean
 munit: CC_FLAGS := $(CC_FLAGS) -DMUNIT_ENABLE -DMUNIT_NO_FORK
-munit: LINK_FLAGS := $(LINK_FLAGS) -lrt
+munit: LINK_FLAGS := $(LINK_FLAGS)
 munit: $B/main
 munit:
 	./build/main
