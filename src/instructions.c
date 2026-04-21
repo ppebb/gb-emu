@@ -107,7 +107,7 @@ void instruction_init() {
     instructions[0x19] = si(ADD16, 1, 2, HL, DE);
     instructions[0x29] = si(ADD16, 1, 2, HL, HL);
     instructions[0x39] = si(ADD16, 1, 2, HL, SP);
-    instructions[0xE8] = si(ADD16, 2, 4, SP, D8);
+    instructions[0xE8] = si(ADD_SPD8, 2, 4, SP, D8);
 
     def_consec_ops(0x80, ADD);
     instructions[0xC6] = si(ADD, 2, 2, A, D8);
@@ -221,7 +221,7 @@ void instruction_init() {
     instructions[0xEA] = si(LD, 3, 4, D16_AS_ADDR, A);
     instructions[0xFA] = si(LD, 3, 4, A, D16_AS_ADDR);
 
-    instructions[0xF8] = si(LD16, 2, 3, HL, SP_PLUS_D8);
+    instructions[0xF8] = si(LD_SP_PLUS_D8, 2, 3, SP, D8);
     instructions[0xF9] = si(LD16, 1, 2, SP, HL);
 
     Target ld_targets[8] = { B, C, D, E, H, L, HL_AS_ADDR, A };

@@ -128,8 +128,6 @@ uint8_t get_op_8(Target target) {
             return mem_read_byte(0xFF00 + mem_read_d8());
         case D16_AS_ADDR:
             return mem_read_byte(mem_read_d16());
-        case SP_PLUS_D8:
-            return regs.sp + (int8_t)mem_read_d8();
         default:
             /* printf("Unknown target get_op_8: %s\n", target_str_map[target]); */
             return 0x67;
@@ -150,6 +148,8 @@ uint16_t get_op_16(Target target) {
             return regs.af;
         case SP:
             return regs.sp;
+        case D8:
+            return mem_read_d8();
         default:
             /* printf("Unknown target get_op_16: %s\n", target_str_map[target]); */
             return 0x69;
@@ -322,6 +322,10 @@ int cpu_step() {
         case ADD16:
             cpu_add16(instr, op1_16, op2_16);
             break;
+        case ADD_SPD8:
+            // add16 with different carry flag logic
+            cpu_add_spd8(instr, op1_16, op2_16);
+            break;
         case CALL:
             jump_result = cpu_call(instr, op2_16);
             break;
@@ -369,6 +373,9 @@ int cpu_step() {
             break;
         case LD16:
             cpu_ld16(instr, op2_16);
+            break;
+        case LD_SP_PLUS_D8:
+            cpu_ld_sp_plus_d8(instr, op1_16, op2_8);
             break;
         case NOP:
             break;
@@ -648,7 +655,19 @@ void cpu_add16(Instruction instr, uint16_t op1, uint16_t op2) {
     F_SET(F_CARRY, res & 0xFFFF0000);
     F_SET(F_HALF, (op1 & 0x0FFF) + (op2 & 0x0FFF) > 0x0FFF);
 
-    regs.hl = (uint16_t)res;
+    set_dest_16(instr.t1, (uint16_t)res);
+}
+
+void cpu_add_spd8(Instruction instr, uint16_t op1, int8_t op2) {
+    F_CLEAR(F_ZERO);
+    F_CLEAR(F_NEG);
+
+    uint32_t res = op1 + op2;
+
+    F_SET(F_CARRY, (op1 & 0x00FF) + (op2 & 0x00FF) > 0x00FF);
+    F_SET(F_HALF, (op1 & 0x000F) + (op2 & 0x000F) > 0x000F);
+
+    set_dest_16(instr.t1, (uint16_t)res);
 }
 
 JumpResult cpu_call(Instruction instr, uint16_t op2) {
@@ -771,6 +790,18 @@ void cpu_ld(Instruction instr, uint8_t op2) {
 
 void cpu_ld16(Instruction instr, uint16_t op2) {
     set_dest_16(instr.t1, op2);
+}
+
+void cpu_ld_sp_plus_d8(Instruction instr, uint16_t sp, int8_t d8) {
+    F_CLEAR(F_ZERO);
+    F_CLEAR(F_NEG);
+
+    uint32_t res = sp + d8;
+
+    F_SET(F_CARRY, (sp & 0x00FF) + (d8 & 0x00FF) > 0x00FF);
+    F_SET(F_HALF, (sp & 0x000F) + (d8 & 0x000F) > 0x000F);
+
+    regs.hl = (uint16_t)res;
 }
 
 void cpu_or(Instruction instr, uint8_t op1, uint8_t op2) {

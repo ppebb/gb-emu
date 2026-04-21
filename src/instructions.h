@@ -7,6 +7,7 @@ typedef enum _Op {
     ADC,
     ADD,
     ADD16,
+    ADD_SPD8,
     AND,
     CALL,
     CCF,
@@ -24,6 +25,7 @@ typedef enum _Op {
     JR,
     LD,
     LD16,
+    LD_SP_PLUS_D8,
     NOP,
     OR,
     POP,
@@ -82,7 +84,6 @@ typedef enum _Op {
     TARGET(HL_AS_ADDR)  \
     TARGET(SP)          \
     TARGET(D8)          \
-    TARGET(SP_PLUS_D8)  \
     TARGET(D8_AS_ADDR)  \
     TARGET(D16)         \
     TARGET(D16_AS_ADDR) \
