@@ -12,7 +12,7 @@ LINK_FLAGS=-lglfw -lGL -lc
 all : $B/main
 
 .PHONY: test
-test : Makefile ${TESTS}
+test: ./test.sh
 
 .PHONY: asan
 asan: CC_FLAGS := $(CC_FLAGS) -fsanitize=address,undefined,leak

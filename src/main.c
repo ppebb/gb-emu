@@ -26,14 +26,14 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    char *rom_path = argv[1];
-    Rom *rom = rom_new(rom_path);
-
     bool step_debug = false;
 
     for (size_t i = 2; i < argc; i++)
         if (strcmp("--step-debug", argv[i]) == 0)
             step_debug = true;
+
+    char *rom_path = argv[1];
+    Rom *rom = rom_new(rom_path);
 
     mem_init(rom);
     cpu_init(step_debug);
@@ -69,7 +69,9 @@ int main(int argc, char **argv) {
 
             timer_step(cycles);
 
-            /* ppu_step(cycles); */
+#ifndef DOCTOR
+            ppu_step(cycles);
+#endif
 
             // Interrupts cost 5 cycles, if one fires we need to add an extra 5
             // cycles to keep timing intact

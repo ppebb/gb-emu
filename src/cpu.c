@@ -110,6 +110,8 @@ uint8_t get_op_8(Target target) {
             return regs.h;
         case L:
             return regs.l;
+        case C_AS_ADDR:
+            return mem_read_byte(regs.c + 0xFF00);
         case BC_AS_ADDR:
             return mem_read_byte(regs.bc);
         case DE_AS_ADDR:
@@ -180,6 +182,9 @@ void set_dest_8(Target target, uint8_t data) {
         case L:
             regs.l = data;
             break;
+        case C_AS_ADDR:
+            mem_write_byte(regs.c + 0xFF00, data);
+            break;
         case BC_AS_ADDR:
             mem_write_byte(regs.bc, data);
             break;
@@ -221,6 +226,9 @@ void set_dest_16(Target target, uint16_t data) {
             break;
         case SP:
             regs.sp = data;
+            break;
+        case D16_AS_ADDR:
+            mem_write_short(mem_read_d16(), data);
             break;
         default:
             fprintf(stderr, "Illegal write 16 to target %s\n", target_str_map[target]);
