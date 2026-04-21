@@ -189,11 +189,13 @@ void mem_write_byte(uint16_t addr, uint8_t data) {
     if (addr < 0xFF80) {
         io[addr - 0xFF00] = data;
 
-        /* if (io[0x02] == 0x81) { */
-        /*     char c = io[0x01]; */
-        /*     printf("%c", c); */
-        /*     io[0x02] = 0x0; */
-        /* } */
+#ifndef DOCTOR
+        if (io[0x02] == 0x81) {
+            char c = io[0x01];
+            printf("%c", c);
+            io[0x02] = 0x0;
+        }
+#endif
         return;
     }
 

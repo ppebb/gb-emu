@@ -265,11 +265,12 @@ int cpu_step() {
     if (regs.halt)
         return 1;
 
-    /* if (false) */
+#ifdef DOCTOR
     printf(
         "A:%02x F:%02x B:%02x C:%02x D:%02x E:%02x H:%02x L:%02x SP:%04x PC:%04x PCMEM:%02x,%02x,%02x,%02x\n", regs.a,
         regs.f, regs.b, regs.c, regs.d, regs.e, regs.h, regs.l, regs.sp, regs.pc, mem_read_byte(regs.pc),
         mem_read_byte(regs.pc + 1), mem_read_byte(regs.pc + 2), mem_read_byte(regs.pc + 3));
+#endif
 
     if (regs.pc == breakpoint)
         _step_debug = true;

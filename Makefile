@@ -27,6 +27,11 @@ munit: $B/main
 munit:
 	./build/main
 
+.PHONY: doctor
+doctor: clean
+doctor: CC_FLAGS := $(CC_FLAGS) -DDOCTOR
+doctor: $B/main
+
 $B/main: ${C_O_FILES}
 	@mkdir -p build
 	${CC} ${LINK} -o $@ ${LINK_FLAGS} ${C_O_FILES}
