@@ -288,7 +288,7 @@ int cpu_step() {
     uint16_t instr_byte = mem_read_byte(regs.pc);
 
     if (instr_byte == 0xCB)
-        instr_byte = (uint16_t)mem_read_byte(regs.pc + 1) + 0xFF;
+        instr_byte = (uint16_t)mem_read_byte(regs.pc + 1) + 0x100;
 
     Instruction instr = instruction_get(instr_byte);
     current_instr = instr;
@@ -903,7 +903,7 @@ void cpu_rr(Instruction instr, uint8_t op) {
 }
 
 JumpResult cpu_rst(Instruction instr) {
-    cpu_push_short(regs.pc);
+    cpu_push_short(regs.pc + instr.length);
 
     return (JumpResult){
         true,

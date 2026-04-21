@@ -57,16 +57,16 @@ Target consec_targets[8] = { B, C, D, E, H, L, HL_AS_ADDR, A };
         instructions[base_addr + i] = si(op, 1, target == HL_AS_ADDR ? 2 : 1, A, target); \
     }
 
-#define def_consec_ops_16_none(base_addr, op)                                                       \
-    for (size_t i = 0; i < 8; i++) {                                                                \
-        Target target = consec_targets[i];                                                          \
-        instructions[base_addr + 0xFF + i] = si(op, 2, target == HL_AS_ADDR ? 4 : 2, target, NONE); \
+#define def_consec_ops_16_none(base_addr, op)                                                        \
+    for (size_t i = 0; i < 8; i++) {                                                                 \
+        Target target = consec_targets[i];                                                           \
+        instructions[base_addr + 0x100 + i] = si(op, 2, target == HL_AS_ADDR ? 4 : 2, target, NONE); \
     }
 
-#define def_consec_ops_16_n(base_addr, op, n)                                                    \
-    for (size_t i = 0; i < 8; i++) {                                                             \
-        Target target = consec_targets[i];                                                       \
-        instructions[base_addr + 0xFF + i] = si(op, 2, target == HL_AS_ADDR ? 4 : 2, target, n); \
+#define def_consec_ops_16_n(base_addr, op, n)                                                     \
+    for (size_t i = 0; i < 8; i++) {                                                              \
+        Target target = consec_targets[i];                                                        \
+        instructions[base_addr + 0x100 + i] = si(op, 2, target == HL_AS_ADDR ? 4 : 2, target, n); \
     }
 
 #define undefined()            \
