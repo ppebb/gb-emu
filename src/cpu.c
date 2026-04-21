@@ -914,7 +914,7 @@ void cpu_bit(Instruction instr, uint8_t op) {
     uint8_t bit_idx = instr.t2;
     assert(bit_idx < 8);
 
-    F_SET(F_ZERO, ~((op >> bit_idx) & 1));
+    F_SET(F_ZERO, !((op >> bit_idx) & 1));
     F_CLEAR(F_NEG);
     F_ENABLE(F_HALF);
 }
