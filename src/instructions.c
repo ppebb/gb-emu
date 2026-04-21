@@ -202,7 +202,7 @@ void instruction_init() {
     instructions[0x26] = si(LD, 2, 2, H, D8);
     instructions[0x36] = si(LD, 2, 2, HL_AS_ADDR, D8);
 
-    instructions[0x08] = si(LD, 3, 5, D16, SP);
+    instructions[0x08] = si(LD, 3, 5, D16_AS_ADDR, SP);
 
     instructions[0x0A] = si(LD, 1, 2, A, BC_AS_ADDR);
     instructions[0x1A] = si(LD, 1, 2, A, DE_AS_ADDR);

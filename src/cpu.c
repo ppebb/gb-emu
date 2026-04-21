@@ -127,7 +127,7 @@ uint8_t get_op_8(Target target) {
         case D16_AS_ADDR:
             return mem_read_byte(mem_read_d16());
         case SP_PLUS_D8:
-            return regs.sp + mem_read_d8();
+            return regs.sp + (int8_t)mem_read_d8();
         default:
             /* printf("Unknown target get_op_8: %s\n", target_str_map[target]); */
             return 0x67;
@@ -146,6 +146,8 @@ uint16_t get_op_16(Target target) {
             return regs.hl;
         case AF:
             return regs.af;
+        case SP:
+            return regs.sp;
         default:
             /* printf("Unknown target get_op_16: %s\n", target_str_map[target]); */
             return 0x69;
@@ -355,7 +357,7 @@ int cpu_step() {
             jump_result = cpu_jr(instr, op2_8);
             break;
         case LD:
-            cpu_ld(instr, op1_16, op2_8);
+            cpu_ld(instr, op2_8);
             break;
         case LD16:
             cpu_ld16(instr, op2_16);
@@ -755,11 +757,8 @@ JumpResult cpu_jr(Instruction instr, int8_t op2) {
     };
 }
 
-void cpu_ld(Instruction instr, uint16_t op1, uint8_t op2) {
-    if (instr.t1 == D16)
-        mem_write_byte(op1, op2);
-    else
-        set_dest_8(instr.t1, op2);
+void cpu_ld(Instruction instr, uint8_t op2) {
+    set_dest_8(instr.t1, op2);
 }
 
 void cpu_ld16(Instruction instr, uint16_t op2) {

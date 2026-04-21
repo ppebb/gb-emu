@@ -43,7 +43,7 @@ void cpu_inc(Instruction instr, uint8_t op1);
 void cpu_inc16(Instruction instr, uint16_t op1);
 JumpResult cpu_jp(Instruction instr, uint16_t op2);
 JumpResult cpu_jr(Instruction instr, int8_t op2);
-void cpu_ld(Instruction instr, uint16_t op1, uint8_t op2);
+void cpu_ld(Instruction instr, uint8_t op2);
 void cpu_ld16(Instruction instr, uint16_t op2);
 void cpu_or(Instruction instr, uint8_t op1, uint8_t op2);
 void cpu_pop(Instruction instr);
