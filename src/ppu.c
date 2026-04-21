@@ -4,6 +4,8 @@
 #include "src/cpu.h"
 #include <stddef.h>
 
+Color frame_buffer[WIDTH * HEIGHT];
+
 typedef enum _LCDStatBits {
     // Take up first two bits
     LCDS_H_BLANK = 0,
@@ -30,7 +32,7 @@ typedef enum _LCDCBits {
 } LCDCBits;
 
 #define lcd_get_mode() (LCDStatBits) read_io(LCD_STAT_ADDR) & 0b11
-#define lcd_calc_mode(status, mode) ({ (status) & 0xFC | (mode); })
+#define lcd_calc_mode(status, mode) ({ ((status) & 0xFC) | (mode); })
 
 // Cycle counts to set specific modes
 #define SEARCHING_BOUNDS (SCLN_CYCLES - 80)
