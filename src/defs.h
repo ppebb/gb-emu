@@ -11,6 +11,13 @@
 #define SCLN_VISIBLE_CNT 144
 #define SCLN_CYCLES 456
 
+#define TM_AREA_A 0x8000
+#define TM_AREA_B 0x8800
+#define TM_AREA_B_OFFSET 0x80
+#define BGWIN_AREA_A 0x9C00
+#define BGWIN_AREA_B 0x9800
+#define TILE_SIZE 0x10
+
 #define DIV_ADDR 0xFF04
 #define TIMA_ADDR 0xFF05
 #define TMA_ADDR 0xFF06
@@ -23,4 +30,7 @@
 #define SCLN_ADDR 0xFF44
 #define LCD_LYC_ADDR 0xFF45
 #define DMA_TRANSFER_ADDR 0xFF46
+#define PALETTE_ADDR 0xFF47
+#define WINY_ADDR 0xFF4A
+#define WINX_ADDR 0xFF4B
 #define IE_ADDR 0xFFFF

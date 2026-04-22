@@ -1,111 +1,22 @@
 #include "ppu.h"
 #include "defs.h"
+#include "lcd.h"
 #include "mem.h"
 #include "src/cpu.h"
+#include <assert.h>
 #include <stddef.h>
+#include <stdio.h>
+
+void ppu_draw_scanline();
+void ppu_draw_bg(uint8_t ctrl);
+void ppu_draw_sprites();
 
 Color frame_buffer[WIDTH * HEIGHT];
-
-typedef enum _LCDStatBits {
-    // Take up first two bits
-    LCDS_H_BLANK = 0,
-    LCDS_V_BLANK = 1,
-    LCDS_SEARCHING = 2,
-    LCDS_TRANSFER = 3,
-    // Remaining indiv bits
-    LCDS_LYC_LY_EQ = 1 << 2,
-    LCDS_H_BLANK_INT = 1 << 3,
-    LCDS_V_BLANK_INT = 1 << 4,
-    LCDS_SEARCHING_INT = 1 << 5,
-    LCDS_LYC_LY_EQ_INT = 1 << 6,
-} LCDStatBits;
-
-typedef enum _LCDCBits {
-    LCDC_BGWIN_PRIO = 1 << 0,
-    LCDC_OBJ = 1 << 1,
-    LCDC_OBJ_SIZE = 1 << 2,
-    LCDC_BG_TM_AREA = 1 << 3,
-    LCDC_BGWIN_TD_AREA = 1 << 4,
-    LCDC_WIN_ENABLE = 1 << 5,
-    LCDC_WIN_TMA = 1 << 6,
-    LCDC_ENABLE = 1 << 7,
-} LCDCBits;
-
-#define lcd_get_mode() (LCDStatBits) read_io(LCD_STAT_ADDR) & 0b11
-#define lcd_calc_mode(status, mode) ({ ((status) & 0xFC) | (mode); })
-
-// Cycle counts to set specific modes
-#define SEARCHING_BOUNDS (SCLN_CYCLES - 80)
-#define TRANSFER_BOUNDS (SEARCHING_BOUNDS - 172)
-
 size_t scanline_counter = 0;
 
-bool lcd_enabled() {
-    return read_io(LCD_CTRL_ADDR) & LCDC_ENABLE;
-}
-
-void lcd_update_status() {
-    uint8_t status = read_io(LCD_STAT_ADDR);
-
-    if (!lcd_enabled()) {
-        // If the lcd is off we're in mode 1, scanline is always 0.
-        scanline_counter = SCLN_CYCLES;
-        write_io(SCLN_ADDR, 0);
-        status &= 0xFC | 1;
-        write_io(LCD_STAT_ADDR, status);
-
-        return;
-    }
-
-    uint8_t cur_line = read_io(SCLN_ADDR);
-    LCDStatBits cur_mode = lcd_get_mode();
-
-    LCDStatBits next_mode = 0;
-    bool request_interrupt = false;
-
-    // vblank
-    if (cur_line >= SCLN_VISIBLE_CNT) {
-        next_mode = LCDS_V_BLANK;
-        status = lcd_calc_mode(status, LCDS_V_BLANK);
-        request_interrupt = status & LCDS_V_BLANK_INT;
-    }
-    // searching
-    else if (scanline_counter >= SEARCHING_BOUNDS) {
-        next_mode = LCDS_SEARCHING;
-        status = lcd_calc_mode(status, LCDS_SEARCHING);
-        request_interrupt = status & LCDS_SEARCHING_INT;
-    }
-    // transfer
-    else if (scanline_counter >= TRANSFER_BOUNDS) {
-        next_mode = LCDS_TRANSFER;
-        status = lcd_calc_mode(status, LCDS_SEARCHING);
-        // No searching interrupt
-    }
-    // hblank
-    else {
-        next_mode = LCDS_H_BLANK;
-        status = lcd_calc_mode(status, LCDS_H_BLANK);
-        request_interrupt = status & LCDS_H_BLANK_INT;
-    }
-
-    if (request_interrupt && next_mode != cur_mode)
-        cpu_req_interrupt(INT_STAT);
-
-    // set coincidence flag
-    if (cur_line == read_io(LCD_LYC_ADDR)) {
-        status |= LCDS_LYC_LY_EQ;
-
-        if (status & LCDS_LYC_LY_EQ_INT)
-            cpu_req_interrupt(INT_STAT);
-    }
-    else
-        status &= !LCDS_LYC_LY_EQ;
-
-    write_io(LCD_STAT_ADDR, status);
-}
-
 void ppu_step(int cycles) {
-    lcd_update_status();
+    // scanline_counter may be reset if the lcd is disabled
+    scanline_counter = lcd_update_status(scanline_counter);
 
     if (!lcd_enabled())
         return;
@@ -117,21 +28,137 @@ void ppu_step(int cycles) {
 
     scanline_counter -= SCLN_CYCLES;
 
-    read_io(SCLN_ADDR)++;
     uint8_t cur_line = read_io(SCLN_ADDR);
 
-    if (cur_line == 144) {
+    if (cur_line < SCLN_VISIBLE_CNT) {
+        ppu_draw_scanline();
+
+        read_io(SCLN_ADDR)++;
+        return;
+    }
+
+    if (cur_line == SCLN_VISIBLE_CNT) {
         cpu_req_interrupt(INT_VBLANK);
+
+        read_io(SCLN_ADDR)++;
         return;
     }
 
     if (cur_line >= SCLN_CNT) {
         write_io(SCLN_ADDR, 0);
+
+        read_io(SCLN_ADDR)++;
         return;
     }
 
-    if (cur_line >= SCLN_VISIBLE_CNT)
+    if (cur_line >= SCLN_VISIBLE_CNT) {
+        read_io(SCLN_ADDR)++;
         return;
+    }
 
-    // draw scln
+    read_io(SCLN_ADDR)++;
+}
+
+void ppu_draw_scanline() {
+    uint8_t ctrl = read_io(LCD_CTRL_ADDR);
+
+    if (ctrl & LCDC_BGWIN_ENABLE)
+        ppu_draw_bg(ctrl);
+
+    if (ctrl & LCDC_OBJ_ENABLE)
+        ppu_draw_sprites();
+}
+
+uint16_t locate_tile(uint8_t tile_id, uint8_t ctrl) {
+    // LCDC_BG_TM_AREA controls whether tiles begin at 0x8000 or 0x8800
+    bool is_area_a = ctrl & LCDC_BGWIN_TD_AREA;
+    size_t region_start = is_area_a ? TM_AREA_A : TM_AREA_B;
+    size_t offset = !is_area_a * TM_AREA_B_OFFSET;
+
+    return region_start + (tile_id + offset) * TILE_SIZE;
+}
+
+Color colors[4] = { COLOR_WHITE, COLOR_LIGHT_GRAY, COLOR_DARK_GRAY, COLOR_BLACK };
+
+Color get_color(uint8_t color_idx) {
+    uint8_t palette = mem_read_byte(PALETTE_ADDR);
+    int hi = color_idx * 2 + 1;
+    int lo = color_idx * 2;
+
+    int color = (palette & (1 << hi)) << 1;
+    color |= (palette & (1 << lo));
+
+    return colors[color];
+}
+
+void ppu_draw_bg(uint8_t ctrl) {
+    uint16_t bg_mem = 0;
+    bool window = false;
+
+    bool tile_unsigned = !(ctrl & LCDC_BG_TM_AREA);
+
+    uint8_t scy = read_io(SCY_ADDR);
+    uint8_t scx = read_io(SCX_ADDR);
+    uint8_t winy = read_io(WINY_ADDR);
+    int16_t winx = read_io(WINX_ADDR) - 7;
+    uint8_t scln = read_io(SCLN_ADDR);
+
+    // draw the window if it is enabled and we are drawing within the window
+    // position
+    window = (ctrl & LCDC_WIN_ENABLE) && winy <= scln;
+
+    if (window)
+        bg_mem = (ctrl & LCDC_WIN_TM_AREA) ? BGWIN_AREA_A : BGWIN_AREA_B;
+    else
+        bg_mem = (ctrl & LCDC_BG_TM_AREA) ? BGWIN_AREA_A : BGWIN_AREA_B;
+
+    uint8_t y_pos = 0;
+
+    if (window)
+        y_pos = scln - winy;
+    else
+        y_pos = scy + scln;
+
+    uint16_t tile_row = ((uint8_t)(y_pos / 8)) * 32;
+
+    for (size_t i = 0; i < WIDTH; i++) {
+        uint8_t x_pos = i + scx;
+
+        if (window)
+            x_pos = i - winx;
+
+        uint16_t tile_col = x_pos / 8;
+        int16_t tile_id;
+        uint16_t tile_addr = bg_mem + tile_row + tile_col;
+
+        if (tile_unsigned)
+            tile_id = (uint8_t)mem_read_byte(tile_addr);
+        else
+            tile_id = (int8_t)mem_read_byte(tile_addr);
+
+        uint16_t tile_loc = locate_tile(tile_id, ctrl);
+
+        uint8_t line = y_pos % 8;
+        line *= 2;
+        uint8_t tile_data_0 = mem_read_byte(tile_loc + line);
+        uint8_t tile_data_1 = mem_read_byte(tile_loc + line + 1);
+
+        int color_bit = x_pos % 8;
+        color_bit -= 7;
+        color_bit *= -1;
+
+        // Color bits are stored in the color_bit'th place of tile_data_1 and
+        // tile_data_0 as if layered on top of each other
+        uint8_t color_idx = (tile_data_1 >> color_bit & 1) << 1;
+        color_idx |= (tile_data_0 >> color_bit & 1);
+
+        Color color = get_color(color_idx);
+
+        assert(scln < HEIGHT && i < WIDTH);
+
+        frame_buffer[scln * WIDTH + i] = color;
+    }
+}
+
+void ppu_draw_sprites() {
 }

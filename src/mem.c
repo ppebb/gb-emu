@@ -96,7 +96,7 @@ uint8_t mem_read_byte(uint16_t addr) {
         return oam[addr - 0xFE00];
 
     if (addr < 0xFF00) {
-        fprintf(stderr, "Prohibited read to Unusable Ram: %04x\n", addr);
+        /* fprintf(stderr, "Prohibited read from Unusable Ram: %04x\n", addr); */
         return 0;
     }
 
