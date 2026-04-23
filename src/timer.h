@@ -4,3 +4,4 @@
 
 void timer_step(int cycles);
 void timer_reset(uint8_t tmc);
+int timer_get_period(uint8_t tmc);

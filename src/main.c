@@ -75,8 +75,11 @@ int main(int argc, char **argv) {
 
             // Interrupts cost 5 cycles, if one fires we need to add an extra 5
             // cycles to keep timing intact
-            if (cpu_run_interrupts())
+            if (cpu_run_interrupts()) {
                 cycles_this_frame += 5;
+                timer_step(5);
+                ppu_step(5);
+            }
         }
 
         // TODO: Draw to a texture.

@@ -69,6 +69,7 @@ typedef struct _Regs {
     uint16_t pc;
 
     bool ime;
+    bool ime_next_cycle;
     bool halt;
 } Regs;
 
@@ -80,6 +81,7 @@ Regs regs = (Regs){
     .pc = 0x100,
     .sp = 0xFFFE,
     .ime = false,
+    .ime_next_cycle = false,
     .halt = false,
 };
 
@@ -275,6 +277,11 @@ int cpu_step() {
     if (regs.halt)
         return 1;
 
+    if (regs.ime_next_cycle) {
+        regs.ime_next_cycle = false;
+        regs.ime = true;
+    }
+
 #ifdef DOCTOR
     printf(
         "A:%02x F:%02x B:%02x C:%02x D:%02x E:%02x H:%02x L:%02x SP:%04x PC:%04x PCMEM:%02x,%02x,%02x,%02x\n", regs.a,
@@ -351,7 +358,7 @@ int cpu_step() {
             regs.ime = false;
             break;
         case EI:
-            regs.ime = true;
+            regs.ime_next_cycle = true;
             break;
         case HALT:
             regs.halt = true;
@@ -559,17 +566,19 @@ bool cpu_run_interrupts() {
 
     uint8_t ie_flags = ie;
 
-    for (Interrupt i = 0; i < 5; i++) {
-        uint8_t bit_idx = 1 << i;
+    for (size_t i = 0; i < 5; i++) {
+        Interrupt interrupt = 1 << i;
 
-        if (!(ie_flags & bit_idx && reqs & bit_idx))
+        if (!(ie_flags & interrupt && reqs & interrupt))
             continue;
 
         regs.ime = false;
-        reqs &= ~bit_idx;
+        reqs &= ~interrupt;
         write_io(IRR_ADDR, reqs);
 
-        switch (i) {
+        cpu_push_short(regs.pc);
+
+        switch (interrupt) {
             case INT_VBLANK:
                 regs.pc = 0x40;
                 break;
