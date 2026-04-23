@@ -69,6 +69,12 @@ Target consec_targets[8] = { B, C, D, E, H, L, HL_AS_ADDR, A };
         instructions[base_addr + 0x100 + i] = si(op, 2, target == HL_AS_ADDR ? 4 : 2, target, n); \
     }
 
+#define def_consec_ops_16_bit(base_addr, op, n)                                                   \
+    for (size_t i = 0; i < 8; i++) {                                                              \
+        Target target = consec_targets[i];                                                        \
+        instructions[base_addr + 0x100 + i] = si(op, 2, target == HL_AS_ADDR ? 3 : 2, target, n); \
+    }
+
 #define undefined()            \
     (Instruction) {            \
         "UNDEFINED", UNDEFINED \
@@ -173,11 +179,11 @@ void instruction_init() {
 
     // jp
     instructions[0xC2] = sij(JP, 3, 4, 3, C_NZ, D16);
-    instructions[0xC3] = si(JP, 3, 3, NONE, D16);
+    instructions[0xC3] = si(JP, 3, 4, NONE, D16);
     instructions[0xCA] = sij(JP, 3, 4, 3, C_Z, D16);
     instructions[0xD2] = sij(JP, 3, 4, 3, C_NC, D16);
     instructions[0xDA] = sij(JP, 3, 4, 3, C_C, D16);
-    instructions[0xE9] = si(JP, 3, 4, NONE, HL);
+    instructions[0xE9] = si(JP, 3, 1, NONE, HL);
 
     // jr
     instructions[0x18] = si(JR, 2, 3, NONE, D8);
@@ -200,7 +206,7 @@ void instruction_init() {
     instructions[0x06] = si(LD, 2, 2, B, D8);
     instructions[0x16] = si(LD, 2, 2, D, D8);
     instructions[0x26] = si(LD, 2, 2, H, D8);
-    instructions[0x36] = si(LD, 2, 2, HL_AS_ADDR, D8);
+    instructions[0x36] = si(LD, 2, 3, HL_AS_ADDR, D8);
 
     instructions[0x08] = si(LD16, 3, 5, D16_AS_ADDR, SP);
 
@@ -319,7 +325,7 @@ void instruction_init() {
     def_consec_ops_16_none(0x30, SWAP);
     def_consec_ops_16_none(0x38, SRL);
     for (size_t j = 0; j < 8; j++) {
-        def_consec_ops_16_n(0x40 + j * 8, BIT, j);
+        def_consec_ops_16_bit(0x40 + j * 8, BIT, j);
         def_consec_ops_16_n(0x80 + j * 8, RES, j);
         def_consec_ops_16_n(0xC0 + j * 8, SET, j);
     }
