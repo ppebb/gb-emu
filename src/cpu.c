@@ -849,10 +849,10 @@ JumpResult cpu_reti(Instruction instr) {
 
     uint16_t next_pc = regs.pc + instr.length;
 
-    if (should_ret)
+    if (should_ret) {
         next_pc = cpu_pop_short();
-
-    regs.ime = true;
+        regs.ime = true;
+    }
 
     return (JumpResult){
         should_ret,
