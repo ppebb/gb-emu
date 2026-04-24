@@ -57,21 +57,18 @@ int main(int argc, char **argv) {
 
     while (!glfwWindowShouldClose(window)) {
         while (cycles_this_frame < CYCLES_PER_FRAME) {
-            if (stop) {
-                continue;
-                cycles_this_frame += 1;
+            /* if (stop) { */
+            /*     continue; */
+            /*     cycles_this_frame += 1; */
 
-                // TODO: Check RESET Terminal?
-            }
+            /*     // TODO: Check RESET Terminal? */
+            /* } */
 
             int cycles = cpu_step();
             cycles_this_frame += cycles;
 
             timer_step(cycles);
-
-#ifndef DOCTOR
             ppu_step(cycles);
-#endif
 
             // Interrupts cost 5 cycles, if one fires we need to add an extra 5
             // cycles to keep timing intact

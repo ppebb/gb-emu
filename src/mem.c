@@ -3,13 +3,12 @@
 #include "rom.h"
 #include "timer.h"
 #include <assert.h>
+#include <stdbit.h>
 #include <stdio.h>
 
 // See https://gbdev.io/pandocs/Memory_Map.html
 
 // TODO: Merge regions of memory which are unbanked to simplify r/w functions
-uint8_t *cart_bank0;      /* 0x0000-0x3FFF */
-uint8_t *cart_bank1;      /* 0x4000-0x7FFF */
 uint8_t vram[0x2000];     /* 0x8000-0x999F */
 uint8_t *ex_ram;          /* 0xA000-0xBFFF */
 uint8_t wram_0[0x1000];   /* 0xC000-0xCFFF */
@@ -20,10 +19,18 @@ uint8_t io[0x80];         /* 0xFF00-0xFF7F */
 uint8_t hram[0x80];       /* 0xFF80-0xFFFE */
 uint8_t ie;               /* 0xFFFF */
 
+// Rom memory is 0x0000-0x8000
+Rom *_rom;
+
+// Banking state
+bool ram_enable = false;
+uint8_t rom_bank_number = 0;
+
+#define set_rom_bank_number_lo(lo) rom_bank_number = (rom_bank_number & (~0b00011111)) | (lo);
+#define set_rom_bank_number_hi(hi) rom_bank_number = (rom_bank_number & (0b00011111)) | (hi);
+
 void mem_init(Rom *rom) {
-    cart_bank0 = rom->data;
-    // TODO: Bank switching
-    cart_bank1 = rom->data + 0x4000;
+    _rom = rom;
 
     // Required initialization states
     write_io(0xFF05, 0x00);
@@ -62,26 +69,22 @@ void mem_init(Rom *rom) {
     ie = 0;
 }
 
-void mem_set_cart_bank0(uint8_t *cb0) {
-    cart_bank0 = cb0;
-}
-
-void mem_set_cart_bank1(uint8_t *cb1) {
-    cart_bank1 = cb1;
-}
-
 uint8_t mem_read_byte(uint16_t addr) {
     if (addr < 0x4000)
-        return cart_bank0[addr];
+        return _rom->data[addr];
 
     if (addr < 0x8000)
-        return cart_bank1[addr - 0x4000];
+        return _rom->data[(rom_bank_number * 0x4000) + (addr - 0x4000)];
 
     if (addr < 0xA000)
         return vram[addr - 0x8000];
 
-    if (addr < 0xC000)
-        return ex_ram[addr - 0xA000];
+    if (addr < 0xC000) {
+        if (_rom->header.ram_banks != 0)
+            return ex_ram[addr - 0xA000];
+        else
+            return 0;
+    }
 
     if (addr < 0xD000)
         return wram_0[addr - 0xC000];
@@ -114,18 +117,49 @@ uint8_t mem_read_byte(uint16_t addr) {
 }
 
 void mem_write_byte(uint16_t addr, uint8_t data) {
-    /* printf("Write of %02x to %04x\n", data, addr); */
-    /* if (addr < 0x4000) { */
-    /*     cart_bank0[addr] = data; */
-    /*     return; */
-    /* } */
+    // TODO: Unhardcode if we want to support something other than MBC1 :)
 
-    /* if (addr < 0x8000) { */
-    /*     cart_bank1[addr - 0x4000] = data; */
-    /*     return; */
-    /* } */
+    // RAM and ROM banking for MBC1
+    if (_rom->header.hw_bits & MBC1) {
+        // https://gbdev.io/pandocs/MBC1.html#00001fff--ram-enable-write-only
+        // Enable ram banking if 0xA is written to 0x0000-0x2000
+        if (addr < 0x2000) {
+            ram_enable = (data & 0xF) == 0xA;
+            return;
+        }
 
-    // Do not write to cartridge
+        // https://gbdev.io/pandocs/MBC1.html#20003fff--rom-bank-number-write-only
+        // Swap ROM banks for 0x2000-0x4000
+        if (addr < 0x4000) {
+            uint8_t lo5 = data & 0b00011111;
+            // If the lo5 bits are set to 0, they are interpreted as requesting
+            // bank 1
+            if (lo5 == 0) {
+                set_rom_bank_number_lo(1);
+                return;
+            }
+
+            // If we have 8 rom banks, we need only 3 bits to address all 8
+            // banks. stdc_bit_width_uc tells us the number of bits we need to
+            // address n (n-1, since 0 is a bank) banks, (1 << bits) - 1 will
+            // give us bits 1s at the end of the bitstring.
+            uint8_t mask = (1 << stdc_bit_width_uc(_rom->header.rom_banks - 1)) - 1;
+            set_rom_bank_number_lo(data & mask);
+            return;
+        }
+
+        if (addr < 0x6000) {
+            // check rom banking mode or something
+            // noop for now, see
+            // https://gbdev.io/pandocs/MBC1.html#40005fff--ram-bank-number--or--upper-bits-of-rom-bank-number-write-only
+        }
+
+        if (addr < 0x8000) {
+            // change rom banking mode
+            // not needed on small games
+        }
+    }
+
     if (addr < 0x8000)
         return;
 
@@ -135,8 +169,10 @@ void mem_write_byte(uint16_t addr, uint8_t data) {
     }
 
     if (addr < 0xC000) {
-        ex_ram[addr - 0xA000] = data;
-        return;
+        if (_rom->header.ram_banks != 0)
+            ex_ram[addr - 0xA000] = data;
+        else
+            return;
     }
 
     if (addr < 0xD000) {

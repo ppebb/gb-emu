@@ -74,10 +74,10 @@ typedef struct _Regs {
 } Regs;
 
 Regs regs = (Regs){
-    .af = 0x01B0,
-    .bc = 0x0013,
-    .de = 0x00D8,
-    .hl = 0x014D,
+    .af = 0x1180,
+    .bc = 0x0000,
+    .de = 0xff56,
+    .hl = 0x000d,
     .pc = 0x100,
     .sp = 0xFFFE,
     .ime = false,

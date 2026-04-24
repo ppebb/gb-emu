@@ -31,11 +31,36 @@ typedef struct __attribute__((packed)) _RomHeaderS {
     uint8_t global_csum[2];
 } RomHeaderS;
 
+typedef enum _CartridgeHardwareBits {
+    ROM_ONLY = 1 << 0,
+    MBC1 = 1 << 1,
+    MBC2 = 1 << 2,
+    MBC3 = 1 << 3,
+    MBC5 = 1 << 4,
+    MBC6 = 1 << 5,
+    MBC7 = 1 << 6,
+    RAM = 1 << 7,
+    ROM = 1 << 8,
+    BATTERY = 1 << 9,
+    RUMBLE = 1 << 10,
+    MMM01 = 1 << 11,
+    TIMER = 1 << 12,
+    SENSOR = 1 << 13,
+    HuC1 = 1 << 14,
+    HuC3 = 1 << 15,
+    POCKET_CAMERA = 1 << 16,
+    BANDAI_TAMA5 = 1 << 17,
+} CartridgeHardwareBits;
+
 static_assert(sizeof(RomHeaderS) == 0x50, "ROM header is the incorrect size");
 
 typedef struct _RomHeader {
     char title[17];
     int rom_size;
+    int rom_banks;
+    int ram_size;
+    int ram_banks;
+    CartridgeHardwareBits hw_bits;
 } RomHeader;
 
 typedef struct _Rom {
