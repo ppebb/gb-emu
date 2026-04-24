@@ -27,10 +27,30 @@ int main(int argc, char **argv) {
     }
 
     bool step_debug = false;
+    long size = 1;
 
-    for (size_t i = 2; i < argc; i++)
+    for (size_t i = 2; i < argc; i++) {
         if (strcmp("--step-debug", argv[i]) == 0)
             step_debug = true;
+        else if (strcmp("--size", argv[i]) == 0) {
+            if (argc <= i + 1) {
+                fprintf(stderr, "Missing argument for --size. Pass an integer as your next argument.\n");
+                exit(1);
+            }
+
+            const char *size_str = argv[i + 1];
+            long parsed_size = strtol(size_str, NULL, 10);
+
+            if (parsed_size == -1) {
+                fprintf(stderr, "Invalid size passed as argument to --size!\n");
+                exit(1);
+            }
+
+            size = parsed_size;
+
+            i++;
+        }
+    }
 
     char *rom_path = argv[1];
     Rom *rom = rom_new(rom_path);
@@ -44,7 +64,7 @@ int main(int argc, char **argv) {
     if (!glfwInit())
         return -1;
 
-    window = glfwCreateWindow(WIDTH, HEIGHT, "ppebulatorGB", NULL, NULL);
+    window = glfwCreateWindow(WIDTH * size, HEIGHT * size, "ppebulatorGB", NULL, NULL);
     if (!window) {
         glfwTerminate();
         return -1;
@@ -82,7 +102,7 @@ int main(int argc, char **argv) {
         // TODO: Draw to a texture.
         glClear(GL_COLOR_BUFFER_BIT);
         glRasterPos2f(-1, 1);
-        glPixelZoom(1, -1);
+        glPixelZoom(size, -size);
         // Draw framebuffer populated by the ppu
         glDrawPixels(WIDTH, HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame_buffer);
         glfwSwapBuffers(window);
