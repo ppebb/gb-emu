@@ -24,7 +24,7 @@ Rom *_rom;
 
 // Banking state
 bool ram_enable = false;
-uint8_t rom_bank_number = 0;
+uint8_t rom_bank_number = 1;
 
 #define set_rom_bank_number_lo(lo) rom_bank_number = (rom_bank_number & (~0b00011111)) | (lo);
 #define set_rom_bank_number_hi(hi) rom_bank_number = (rom_bank_number & (0b00011111)) | (hi);
