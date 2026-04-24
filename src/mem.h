@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ppu.h"
 #include "rom.h"
 #include <stdint.h>
 
@@ -20,3 +21,4 @@ void mem_dma_transfer(uint8_t src);
 
 uint16_t mem_read_short(uint16_t addr);
 void mem_write_short(uint16_t addr, uint16_t data);
+OAMEntry *mem_get_oam_entries();

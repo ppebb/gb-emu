@@ -69,7 +69,7 @@ void ppu_draw_scanline() {
         ppu_draw_sprites();
 }
 
-uint16_t locate_tile(uint8_t tile_id, uint8_t ctrl) {
+uint16_t locate_tile(int8_t tile_id, uint8_t ctrl) {
     // LCDC_BG_TM_AREA controls whether tiles begin at 0x8000 or 0x8800
     bool is_area_a = ctrl & LCDC_BGWIN_TD_AREA;
     size_t region_start = is_area_a ? TM_AREA_A : TM_AREA_B;
@@ -79,9 +79,10 @@ uint16_t locate_tile(uint8_t tile_id, uint8_t ctrl) {
 }
 
 Color colors[4] = { COLOR_WHITE, COLOR_LIGHT_GRAY, COLOR_DARK_GRAY, COLOR_BLACK };
+uint16_t palette_addrs[3] = { BGP_ADDR, OBP0_ADDR, OBP1_ADDR };
 
-Color get_color(uint8_t color_idx) {
-    uint8_t palette = mem_read_byte(PALETTE_ADDR);
+Color get_color(uint8_t color_idx, uint8_t palette_idx) {
+    uint8_t palette = mem_read_byte(palette_addrs[palette_idx]);
     int hi = color_idx * 2 + 1;
     int lo = color_idx * 2;
 
@@ -152,7 +153,7 @@ void ppu_draw_bg(uint8_t ctrl) {
         uint8_t color_idx = (tile_data_1 >> color_bit & 1) << 1;
         color_idx |= (tile_data_0 >> color_bit & 1);
 
-        Color color = get_color(color_idx);
+        Color color = get_color(color_idx, 0);
 
         assert(scln < HEIGHT && i < WIDTH);
 

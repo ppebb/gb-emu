@@ -1,5 +1,6 @@
 #include "mem.h"
 #include "defs.h"
+#include "ppu.h"
 #include "rom.h"
 #include "timer.h"
 #include <assert.h>
@@ -270,4 +271,8 @@ void mem_write_short(uint16_t addr, uint16_t data) {
     /* printf("Write short %04x to %04x\n", data, addr); */
     mem_write_byte(addr, (uint8_t)data);
     mem_write_byte(addr + 1, data >> 8);
+}
+
+OAMEntry *mem_get_oam_entries() {
+    return (OAMEntry *)oam;
 }

@@ -18,6 +18,8 @@
 #define BGWIN_AREA_B 0x9800
 #define TILE_SIZE 0x10
 
+#define OAM_LEN 0x28
+
 #define DIV_ADDR 0xFF04
 #define TIMA_ADDR 0xFF05
 #define TMA_ADDR 0xFF06
@@ -30,7 +32,9 @@
 #define SCLN_ADDR 0xFF44
 #define LCD_LYC_ADDR 0xFF45
 #define DMA_TRANSFER_ADDR 0xFF46
-#define PALETTE_ADDR 0xFF47
+#define BGP_ADDR 0xFF47
+#define OBP0_ADDR 0xFF48
+#define OBP1_ADDR 0xFF49
 #define WINY_ADDR 0xFF4A
 #define WINX_ADDR 0xFF4B
 #define IE_ADDR 0xFFFF

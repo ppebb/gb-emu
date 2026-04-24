@@ -2,8 +2,10 @@
 #include "defs.h"
 #include "instructions.h"
 #include "mem.h"
+#include "ppu.h"
 #include "rom.h"
-#include "src/ppu.h"
+#include "sprite_window.h"
+#include "tiledata_window.h"
 #include "timer.h"
 #include <bits/time.h>
 #include <GL/gl.h>
@@ -28,6 +30,8 @@ int main(int argc, char **argv) {
 
     bool step_debug = false;
     long size = 1;
+    bool tiledata_window_enabled = false;
+    bool sprite_viewer_enabled = false;
 
     for (size_t i = 2; i < argc; i++) {
         if (strcmp("--step-debug", argv[i]) == 0)
@@ -38,6 +42,14 @@ int main(int argc, char **argv) {
             rom_free(rom);
 
             return 0;
+        }
+        else if (strcmp("--tile-data", argv[i]) == 0) {
+            printf("Spawning tiledata window.\n");
+            tiledata_window_enabled = true;
+        }
+        else if (strcmp("--sprite-viewer", argv[i]) == 0) {
+            printf("Spawning sprite-viewer window.\n");
+            sprite_viewer_enabled = true;
         }
         else if (strcmp("--size", argv[i]) == 0) {
             if (argc <= i + 1) {
@@ -82,6 +94,12 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+    if (tiledata_window_enabled)
+        tiledata_window_init(window, size);
+
+    if (sprite_viewer_enabled)
+        sprite_window_init(window, size);
+
     glfwMakeContextCurrent(window);
 
     int cycles_this_frame = 0;
@@ -110,6 +128,14 @@ int main(int argc, char **argv) {
                 ppu_step(5);
             }
         }
+
+        if (tiledata_window_enabled)
+            tiledata_window_draw();
+
+        if (sprite_viewer_enabled)
+            sprite_window_draw();
+
+        glfwMakeContextCurrent(window);
 
         // TODO: Draw to a texture.
         glClear(GL_COLOR_BUFFER_BIT);
@@ -144,6 +170,10 @@ int main(int argc, char **argv) {
     }
 
     rom_free(rom);
+
+    if (tiledata_window_enabled)
+        tiledata_window_finish();
+
     glfwTerminate();
     return 0;
 }
