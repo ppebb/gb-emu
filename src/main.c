@@ -32,6 +32,13 @@ int main(int argc, char **argv) {
     for (size_t i = 2; i < argc; i++) {
         if (strcmp("--step-debug", argv[i]) == 0)
             step_debug = true;
+        else if (strcmp("--rom-info", argv[i]) == 0) {
+            Rom *rom = rom_new(argv[1]);
+            rom_info(rom);
+            rom_free(rom);
+
+            return 0;
+        }
         else if (strcmp("--size", argv[i]) == 0) {
             if (argc <= i + 1) {
                 fprintf(stderr, "Missing argument for --size. Pass an integer as your next argument.\n");
@@ -54,6 +61,7 @@ int main(int argc, char **argv) {
 
     char *rom_path = argv[1];
     Rom *rom = rom_new(rom_path);
+    rom_info(rom);
     if (!rom) {
         fprintf(stderr, "Failed to load rom!\n");
         exit(1);

@@ -70,4 +70,5 @@ typedef struct _Rom {
 } Rom;
 
 Rom *rom_new(char *file);
+void rom_info(Rom *rom);
 void rom_free(Rom *rom);

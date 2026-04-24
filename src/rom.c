@@ -160,17 +160,20 @@ Rom *rom_new(char *file) {
         .data = rom_data,
     };
 
-    printf("Loaded ROM %s\n", rom_header.title);
-    printf("Loaded ROM of type %s\n", rom_get_hw_bits_string(rom_header_s->cartridge_type));
-    printf("ROM Size: %d KiB, ROM Banks: %d\n", rom_header.rom_size / (1024), rom_header.rom_banks);
-    printf("RAM Size: %d KiB, RAM Banks: %d\n", rom_header.ram_size / (1024), rom_header.ram_banks);
-
     return ret;
+}
+
+void rom_info(Rom *rom) {
+    RomHeaderS *rom_header_s = (RomHeaderS *)(rom->data + 0x100);
+
+    printf("ROM %s\n", rom->header.title);
+    printf("Cartridge Type: %s\n", rom_get_hw_bits_string(rom_header_s->cartridge_type));
+    printf("ROM Size: %d KiB, ROM Banks: %d\n", rom->header.rom_size / (1024), rom->header.rom_banks);
+    printf("RAM Size: %d KiB, RAM Banks: %d\n", rom->header.ram_size / (1024), rom->header.ram_banks);
 }
 
 void rom_free(Rom *rom) {
     munmap(rom->data, rom->header.rom_size);
     close(rom->fd);
-    free(rom->header.title);
     free(rom);
 }
