@@ -54,6 +54,10 @@ int main(int argc, char **argv) {
 
     char *rom_path = argv[1];
     Rom *rom = rom_new(rom_path);
+    if (!rom) {
+        fprintf(stderr, "Failed to load rom!\n");
+        exit(1);
+    }
 
     mem_init(rom);
     cpu_init(step_debug);
