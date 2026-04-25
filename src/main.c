@@ -131,16 +131,25 @@ int main(int argc, char **argv) {
         a_print_help();
     }
 
-    for (int i = 0; i < argc; i++) {
+    for (int i = 2; i < argc; i++) {
         char *arg_str = argv[i];
 
         for (int j = 0; j < args_len; j++) {
             Arg arg = args[j];
 
-            for (int k = 0; arg.strings[k] != NULL; k++)
-                if (strcmp(arg_str, arg.strings[k]) == 0)
+            for (int k = 0; arg.strings[k] != NULL; k++) {
+                if (strcmp(arg_str, arg.strings[k]) == 0) {
                     arg.func(&i, argc, argv);
+
+                    goto next_arg;
+                }
+            }
         }
+
+        fprintf(stderr, "Unknown argument %s!\n", arg_str);
+        a_print_help();
+
+    next_arg:
     }
 
     char *rom_path = argv[1];
