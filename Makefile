@@ -9,30 +9,14 @@ LINK=${firstword ${${patsubst %.c,${CC},${C_FILES}}}}
 LINK_FLAGS=-lglfw -lGL -lc
 
 .PHONY: all
-all : $B/main
-
-.PHONY: test
-test: ./test.sh
+all : $B/gb
 
 .PHONY: asan
 asan: CC_FLAGS := $(CC_FLAGS) -fsanitize=address,undefined,leak
 asan: LINK_FLAGS := $(LINK_FLAGS) -fsanitize=address,undefined,leak
-asan: $B/main
+asan: $B/gb
 
-.PHONY: munit
-munit: clean
-munit: CC_FLAGS := $(CC_FLAGS) -DMUNIT_ENABLE -DMUNIT_NO_FORK
-munit: LINK_FLAGS := $(LINK_FLAGS)
-munit: $B/main
-munit:
-	./build/main
-
-.PHONY: doctor
-doctor: clean
-doctor: CC_FLAGS := $(CC_FLAGS) -DDOCTOR
-doctor: $B/main
-
-$B/main: ${C_O_FILES}
+$B/gb: ${C_O_FILES}
 	@mkdir -p build
 	${CC} ${LINK} -o $@ ${LINK_FLAGS} ${C_O_FILES}
 
