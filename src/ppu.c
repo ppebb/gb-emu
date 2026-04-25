@@ -86,8 +86,8 @@ Color get_color(uint8_t color_idx, uint8_t palette_idx) {
     int hi = color_idx * 2 + 1;
     int lo = color_idx * 2;
 
-    int color = (palette & (1 << hi)) << 1;
-    color |= (palette & (1 << lo));
+    int color = ((palette >> hi) & 1) << 1;
+    color |= (palette >> lo) & 1;
 
     return colors[color];
 }

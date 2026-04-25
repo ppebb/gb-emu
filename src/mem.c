@@ -197,8 +197,8 @@ void mem_write_byte(uint16_t addr, uint8_t data) {
         return;
     }
 
-    if (addr < 0xFE00) {
-        fprintf(stderr, "Prohibited write to Unusable Ram: %04x\n", addr);
+    if (addr < 0xFF00) {
+        /* fprintf(stderr, "Prohibited write to Unusable Ram: %04x\n", addr); */
         return;
     }
 
