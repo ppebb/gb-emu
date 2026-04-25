@@ -9,7 +9,7 @@
 
 void ppu_draw_scanline();
 void ppu_draw_bg(uint8_t ctrl);
-void ppu_draw_sprites();
+void ppu_draw_sprites(uint8_t ctrl);
 
 Color frame_buffer[WIDTH * HEIGHT];
 size_t scanline_counter = 0;
@@ -66,7 +66,7 @@ void ppu_draw_scanline() {
         ppu_draw_bg(ctrl);
 
     if (ctrl & LCDC_OBJ_ENABLE)
-        ppu_draw_sprites();
+        ppu_draw_sprites(ctrl);
 }
 
 uint16_t locate_tile(int8_t tile_id, uint8_t ctrl) {
@@ -161,5 +161,61 @@ void ppu_draw_bg(uint8_t ctrl) {
     }
 }
 
-void ppu_draw_sprites() {
+void ppu_draw_sprites(uint8_t ctrl) {
+    uint8_t scln = read_io(SCLN_ADDR);
+    bool tall_sprites = ctrl & LCDC_OBJ_SIZE;
+    uint8_t y_size = 8 + 8 * tall_sprites;
+
+    OAMEntry *oam = mem_get_oam_entries();
+
+    for (size_t sprite_idx = 0; sprite_idx < OAM_LEN; sprite_idx++) {
+        OAMEntry entry = oam[sprite_idx];
+        int y_pos = entry.y_pos - 16;
+
+        // Draw nothing if the sprite is outside of the scanline
+        if (scln < y_pos || scln >= y_pos + y_size)
+            continue;
+
+        // When using 8x16 sprites, the subsequent tile in memory serves as the
+        // bottom half of the sprite. So if we're beyond 8 pixels from the
+        // start of the sprite we need the next tile_idx.
+        uint16_t tile_loc;
+        if (!tall_sprites)
+            tile_loc = TM_AREA_A + (entry.tile_idx * 16);
+        else if ((scln - y_pos) <= 8)
+            tile_loc = TM_AREA_A + ((entry.tile_idx & 0xFE) * 16);
+        else
+            tile_loc = TM_AREA_A + ((entry.tile_idx | 1) * 16);
+
+        uint8_t line = scln - y_pos;
+
+        if (entry.y_flip)
+            line = (line - y_size) * -1;
+
+        line *= 2;
+
+        uint8_t tile_data_0 = mem_read_byte(tile_loc + line);
+        uint8_t tile_data_1 = mem_read_byte(tile_loc + line + 1);
+
+        for (int i = 0; i < 8; i++) {
+            int pixel_idx = i;
+            if (entry.x_flip)
+                pixel_idx = (pixel_idx - 7) * -1;
+
+            assert(scln < HEIGHT && scln < WIDTH);
+
+            // Flip the color bit since the pixel we're drawing is reversed
+            // from the pixel in memory
+            int color_bit = (pixel_idx - 7) * -1;
+            uint8_t color_idx = (tile_data_1 >> color_bit & 1) << 1;
+            color_idx |= (tile_data_0 >> color_bit & 1);
+
+            if (color_idx == 0)
+                continue;
+
+            Color color = get_color(color_idx, entry.dmg_palette ? 2 : 1);
+
+            frame_buffer[scln * WIDTH + (entry.x_pos - 8 + i)] = color;
+        }
+    }
 }
