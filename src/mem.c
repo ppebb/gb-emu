@@ -2,6 +2,7 @@
 #include "defs.h"
 #include "ppu.h"
 #include "rom.h"
+#include "src/input.h"
 #include "timer.h"
 #include <assert.h>
 #include <stdbit.h>
@@ -104,6 +105,9 @@ uint8_t mem_read_byte(uint16_t addr) {
         return 0;
     }
 
+    if (addr == JOYPAD_ADDR)
+        return input_read();
+
     if (addr < 0xFF80)
         return io[addr - 0xFF00];
 
@@ -203,7 +207,6 @@ void mem_write_byte(uint16_t addr, uint8_t data) {
     }
 
     // Trap certain IO addresses
-
     if (addr == DIV_ADDR) {
         write_io(DIV_ADDR, 0);
         return;

@@ -1,5 +1,6 @@
 #include "cpu.h"
 #include "defs.h"
+#include "input.h"
 #include "instructions.h"
 #include "mem.h"
 #include "ppu.h"
@@ -175,6 +176,8 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+    input_init(window);
+
     if (tiledata_window_enabled)
         tiledata_window_init(window, scale);
 
@@ -225,6 +228,7 @@ int main(int argc, char **argv) {
         // Draw framebuffer populated by the ppu
         glDrawPixels(WIDTH, HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame_buffer);
         glfwSwapBuffers(window);
+        input_poll();
 
         cycles_this_frame -= CYCLES_PER_FRAME;
 
@@ -246,8 +250,6 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Frame took too long! %ld:%09ld\n", diff.tv_sec, diff.tv_nsec);
 
         clock_gettime(CLOCK_MONOTONIC, &frame_start);
-
-        glfwPollEvents();
     }
 
     rom_free(rom);

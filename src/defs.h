@@ -20,6 +20,7 @@
 
 #define OAM_LEN 0x28
 
+#define JOYPAD_ADDR 0xFF00
 #define DIV_ADDR 0xFF04
 #define TIMA_ADDR 0xFF05
 #define TMA_ADDR 0xFF06
