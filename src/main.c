@@ -22,52 +22,124 @@ static void diff_timespec(struct timespec *res, struct timespec *a, struct times
     res->tv_nsec = a->tv_nsec - b->tv_nsec + (a->tv_nsec < b->tv_nsec) * 1E9;
 }
 
+typedef struct _Arg {
+    char *desc;
+    void (*func)(int *idx, int argc, char **argv);
+    char *strings[3];
+} Arg;
+
+#define ARG(_func, _desc, ...)                         \
+    (Arg) {                                            \
+        _desc, (void (*)(int *, int, char **))_func, { \
+            __VA_ARGS__                                \
+        }                                              \
+    }
+
+void a_print_help();
+
+bool step_debug = false;
+long scale = 1;
+bool tiledata_window_enabled = false;
+bool sprite_viewer_enabled = false;
+
+void a_step_debug() {
+    step_debug = true;
+}
+
+void a_scale(int *idx, int argc, char **argv) {
+    if (argc <= *idx + 1) {
+        fprintf(stderr, "Missing argument for --size. Pass an integer as your next argument.\n");
+        exit(1);
+    }
+
+    const char *size_str = argv[*idx + 1];
+    long parsed_size = strtol(size_str, NULL, 10);
+
+    if (parsed_size == -1) {
+        fprintf(stderr, "Invalid size passed as argument to --size!\n");
+        exit(1);
+    }
+
+    scale = parsed_size;
+
+    (*idx)++;
+}
+
+void a_rom_info(int *_0, int _1, char **argv) {
+    Rom *rom = rom_new(argv[1]);
+    rom_info(rom);
+    rom_free(rom);
+
+    exit(0);
+}
+
+void a_tiledata_viewer() {
+    tiledata_window_enabled = true;
+}
+
+void a_sprite_viewer() {
+    sprite_viewer_enabled = true;
+}
+
+// clang-format off
+Arg args[] = {
+    ARG(a_print_help, "Print this message", "-h", "--help", NULL),
+    ARG(a_scale, "Set the scale [-s LONG]", "-s", "--scale", NULL),
+    ARG(a_step_debug, "Enable step-by-step debugging", "--step-debug", NULL),
+    ARG(a_rom_info, "Display ROM info", "--rom-info", NULL),
+    ARG(a_tiledata_viewer, "Enable the tile-data viewer", "-tdv", "--tile-data", NULL),
+    ARG(a_sprite_viewer, "Enable the sprite viewer", "-sv", "--sprite-viewer", NULL),
+};
+
+const size_t args_len = sizeof(args) / sizeof(args[0]);
+// clang-format on
+
+#define ALIGN 25
+
+void a_print_help() {
+    printf("./gb ROM [options]\n\n");
+
+    for (size_t i = 0; i < args_len; i++) {
+        Arg arg = args[i];
+
+        size_t c = 0;
+
+        for (size_t j = 0; arg.strings[j] != NULL; j++) {
+            c += strlen(arg.strings[j]);
+
+            if (arg.strings[j + 1] == NULL) {
+                printf("%s", arg.strings[j]);
+
+                for (; c < ALIGN; c++)
+                    printf("%c", ' ');
+            }
+            else {
+                printf("%s|", arg.strings[j]);
+                c += 1;
+            }
+        }
+
+        printf("%s\n", arg.desc);
+    }
+
+    exit(1);
+}
+
 int main(int argc, char **argv) {
     if (argc < 2) {
         fprintf(stderr, "No args provided! Pass a rom file as the first argument\n");
-        return 1;
+        a_print_help();
     }
 
-    bool step_debug = false;
-    long size = 1;
-    bool tiledata_window_enabled = false;
-    bool sprite_viewer_enabled = false;
+    for (int i = 0; i < argc; i++) {
+        char *arg_str = argv[i];
 
-    for (size_t i = 2; i < argc; i++) {
-        if (strcmp("--step-debug", argv[i]) == 0)
-            step_debug = true;
-        else if (strcmp("--rom-info", argv[i]) == 0) {
-            Rom *rom = rom_new(argv[1]);
-            rom_info(rom);
-            rom_free(rom);
+        for (int j = 0; j < args_len; j++) {
+            Arg arg = args[j];
 
-            return 0;
-        }
-        else if (strcmp("--tile-data", argv[i]) == 0) {
-            printf("Spawning tiledata window.\n");
-            tiledata_window_enabled = true;
-        }
-        else if (strcmp("--sprite-viewer", argv[i]) == 0) {
-            printf("Spawning sprite-viewer window.\n");
-            sprite_viewer_enabled = true;
-        }
-        else if (strcmp("--size", argv[i]) == 0) {
-            if (argc <= i + 1) {
-                fprintf(stderr, "Missing argument for --size. Pass an integer as your next argument.\n");
-                exit(1);
-            }
-
-            const char *size_str = argv[i + 1];
-            long parsed_size = strtol(size_str, NULL, 10);
-
-            if (parsed_size == -1) {
-                fprintf(stderr, "Invalid size passed as argument to --size!\n");
-                exit(1);
-            }
-
-            size = parsed_size;
-
-            i++;
+            for (int k = 0; arg.strings[k] != NULL; k++)
+                if (strcmp(arg_str, arg.strings[k]) == 0)
+                    arg.func(&i, argc, argv);
         }
     }
 
@@ -88,17 +160,17 @@ int main(int argc, char **argv) {
     if (!glfwInit())
         return -1;
 
-    window = glfwCreateWindow(WIDTH * size, HEIGHT * size, "ppebulatorGB", NULL, NULL);
+    window = glfwCreateWindow(WIDTH * scale, HEIGHT * scale, "ppebulatorGB", NULL, NULL);
     if (!window) {
         glfwTerminate();
         return -1;
     }
 
     if (tiledata_window_enabled)
-        tiledata_window_init(window, size);
+        tiledata_window_init(window, scale);
 
     if (sprite_viewer_enabled)
-        sprite_window_init(window, size);
+        sprite_window_init(window, scale);
 
     glfwMakeContextCurrent(window);
 
@@ -140,7 +212,7 @@ int main(int argc, char **argv) {
         // TODO: Draw to a texture.
         glClear(GL_COLOR_BUFFER_BIT);
         glRasterPos2f(-1, 1);
-        glPixelZoom(size, -size);
+        glPixelZoom(scale, -scale);
         // Draw framebuffer populated by the ppu
         glDrawPixels(WIDTH, HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, frame_buffer);
         glfwSwapBuffers(window);
